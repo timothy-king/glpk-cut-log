@@ -20,7 +20,10 @@ libglpk_la_LDFLAGS = \
 -version-info 36:0:1 \
 -export-symbols-regex '^glp_*'
 
+
+# all of the cut log sources are listed first
 libglpk_la_SOURCES = \
+cutlog01.c \
 glpapi01.c \
 glpapi02.c \
 glpapi03.c \

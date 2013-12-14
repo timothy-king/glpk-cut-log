@@ -1057,6 +1057,13 @@ int glp_top_sort(glp_graph *G, int v_num);
 int glp_wclique_exact(glp_graph *G, int v_wgt, double *sol, int v_set);
 /* find maximum weight clique with exact algorithm */
 
+/*******************************************/
+/***               CUT LOG               ***/
+/*******************************************/
+
+int glp_get_it_cnt(glp_prob *P);
+/* get the iteration count of the current problem */
+
 #ifdef __cplusplus
 }
 #endif
