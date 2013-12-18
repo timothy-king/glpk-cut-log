@@ -1201,6 +1201,15 @@ static void add_cut(glp_tree *tree, struct MIR *mir)
 #else
       glp_ios_add_row(tree, NULL, GLP_RF_MIR, 0, len, ind, val, GLP_UP,
          mir->cut_rhs);
+
+      /** callback for a cut being added to the cut pool */
+      printf("tree parm %p\n", tree->parm->cb_func);
+      if (tree->parm->cb_func != NULL)
+      {  xassert(tree->reason == GLP_ICUTGEN);
+         tree->reason = GLP_ICUTADDED;
+         tree->parm->cb_func(tree, tree->parm->cb_info);
+         tree->reason = GLP_ICUTGEN;
+      }
 #endif
       xfree(ind);
       xfree(val);

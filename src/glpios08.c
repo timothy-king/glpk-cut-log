@@ -129,6 +129,15 @@ void ios_clq_gen(glp_tree *T, void *G_)
       /* add cut inequality to local cut pool */
       glp_ios_add_row(T, NULL, GLP_RF_CLQ, 0, len, ind, val, GLP_UP,
          rhs);
+
+      /** callback for a cut being added to the cut pool */
+      if (T->parm->cb_func != NULL)
+      {  xassert(T->reason == GLP_ICUTGEN);
+         T->reason = GLP_ICUTADDED;
+         T->parm->cb_func(T, T->parm->cb_info);
+         T->reason = GLP_ICUTGEN;
+      }
+
 skip: /* free working arrays */
       tfree(ind);
       tfree(val);

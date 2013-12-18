@@ -159,6 +159,7 @@ glp_tree *ios_create_tree(glp_prob *mip, const glp_iocp *parm)
       tree->stop = 0;
       /* create the root subproblem, which initially is identical to
          the original MIP */
+
       new_node(tree, NULL);
       return tree;
 }
@@ -1417,6 +1418,7 @@ int ios_add_row(glp_tree *tree, IOSPOOL *pool,
       cut->rhs = rhs;
       cut->prev = pool->tail;
       cut->next = NULL;
+      cut->aux = NULL;
       if (cut->prev == NULL)
          pool->head = cut;
       else
@@ -1517,6 +1519,11 @@ void ios_del_row(glp_tree *tree, IOSPOOL *pool, int i)
          cut->ptr = aij->next;
          dmp_free_atom(tree->pool, aij, sizeof(IOSAIJ));
       }
+
+      if (cut->aux != NULL){
+        ios_delete_aux(cut->aux);
+      }
+
       dmp_free_atom(tree->pool, cut, sizeof(IOSCUT));
       pool->size--;
       return;
@@ -1534,6 +1541,10 @@ void ios_clear_pool(glp_tree *tree, IOSPOOL *pool)
          {  IOSAIJ *aij = cut->ptr;
             cut->ptr = aij->next;
             dmp_free_atom(tree->pool, aij, sizeof(IOSAIJ));
+         }
+
+         if (cut->aux != NULL){
+           ios_delete_aux(cut->aux);
          }
          dmp_free_atom(tree->pool, cut, sizeof(IOSCUT));
       }

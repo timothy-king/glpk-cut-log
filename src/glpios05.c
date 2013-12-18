@@ -65,6 +65,9 @@ static void gen_cut(glp_tree *tree, struct worka *worka, int j)
       double *phi = worka->phi;
       int i, k, len, kind, stat;
       double lb, ub, alfa, beta, ksi, phi1, rhs;
+      int input_j;
+      input_j = j;
+
       /* compute row of the simplex tableau, which (row) corresponds
          to specified basic variable xB[i] = x[m+j]; see (23) */
       len = glp_eval_tab_row(mip, m+j, ind, val);
@@ -218,8 +221,18 @@ skip:    ;
       ios_add_cut_row(tree, pool, GLP_RF_GMI, len, ind, val, GLP_LO,
          rhs);
 #else
-      glp_ios_add_row(tree, NULL, GLP_RF_GMI, 0, len, ind, val, GLP_LO,
-         rhs);
+      int ord;
+      ord = glp_ios_add_row(tree, NULL, GLP_RF_GMI, 0, len, ind, val,
+                            GLP_LO, rhs);
+      ios_cut_set_gmi_aux(tree, ord, input_j);
+
+      /** callback for a cut being added to the cut pool */
+      if (tree->parm->cb_func != NULL)
+      {  xassert(tree->reason == GLP_ICUTGEN);
+         tree->reason = GLP_ICUTADDED;
+         tree->parm->cb_func(tree, tree->parm->cb_info);
+         tree->reason = GLP_ICUTGEN;
+      }
 #endif
 fini: return;
 }

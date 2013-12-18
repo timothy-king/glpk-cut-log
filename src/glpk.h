@@ -229,6 +229,7 @@ typedef struct
 #define GLP_IBRANCH     0x05  /* request for branching */
 #define GLP_ISELECT     0x06  /* request for subproblem selection */
 #define GLP_IPREPRO     0x07  /* request for preprocessing */
+#define GLP_ICUTADDED   0x08  /* cut was added to the pool */
 
 /* branch selection indicator: */
 #define GLP_NO_BRNCH       0  /* select no branch */
@@ -1063,6 +1064,12 @@ int glp_wclique_exact(glp_graph *G, int v_wgt, double *sol, int v_set);
 
 int glp_get_it_cnt(glp_prob *P);
 /* get the iteration count of the current problem */
+
+
+int glp_ios_get_cut(glp_tree *T, int i, int ind[], double val[], int* klass, int* type, double* rhs);
+/* determine reason for calling the callback routine */
+
+void glp_ios_cut_get_aux(glp_tree *T, int i, int *r, double *rm, int *c, double *cm);
 
 #ifdef __cplusplus
 }

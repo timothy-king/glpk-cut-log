@@ -36,6 +36,9 @@ typedef struct IOSAIJ IOSAIJ;
 typedef struct IOSPOOL IOSPOOL;
 typedef struct IOSCUT IOSCUT;
 
+
+typedef struct IOSAUX IOSAUX;
+
 struct glp_tree
 {     /* branch-and-bound tree */
       int magic;
@@ -217,6 +220,9 @@ struct glp_tree
          GLP_NO_BRNCH - use general selection technique */
       int child;
       /* subproblem reference number corresponding to br_sel */
+
+  /* start of cut log extras */
+  //int cut_klass;
 };
 
 struct IOSLOT
@@ -393,11 +399,35 @@ struct IOSCUT
          GLP_FX: sum a[j] * x[j]  = b */
       double rhs;
       /* cut right-hand side */
+
+      IOSAUX *aux;
+      /* cut auxillary source information */
+
       IOSCUT *prev;
       /* pointer to previous cut */
       IOSCUT *next;
       /* pointer to next cut */
 };
+
+struct IOSAUX
+{     /* aux (auxillary source information for each cut)
+       * Each cut operates on a row that can be described using
+       * a current row or a previous cut.
+       * To generalize, we assume each row is a sum of two rows:
+       *   row[r]* r_mult + pool[c] * c_mult
+       */
+      int r;
+      /* variable corresponding the source row in the current lp. */
+      double r_mult;
+      /* multiple for the row corresponding to j. */
+
+      int c;
+      /* ordinal of a cut in the current cut pool that is the
+       * source of the current cut. */
+      double c_mult;
+      /* multiple for the row corresponding to c. */
+};
+
 
 #define ios_create_tree _glp_ios_create_tree
 glp_tree *ios_create_tree(glp_prob *mip, const glp_iocp *parm);
@@ -614,6 +644,11 @@ int ios_choose_node(glp_tree *T);
 #define ios_choose_var _glp_ios_choose_var
 int ios_choose_var(glp_tree *T, int *next);
 /* select variable to branch on */
+
+IOSAUX *ios_create_aux();
+void ios_delete_aux(IOSAUX *aux);
+void ios_cut_set_gmi_aux(glp_tree *T, int ord, int j);
+
 
 #endif
 

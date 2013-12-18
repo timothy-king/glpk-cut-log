@@ -543,6 +543,14 @@ void ios_cov_gen(glp_tree *tree)
          /* add the cut to the cut pool */
          glp_ios_add_row(tree, NULL, GLP_RF_COV, 0, len, ind, val,
             GLP_UP, val[0]);
+
+         /** callback for a cut being added to the cut pool */
+         if (tree->parm->cb_func != NULL)
+         {  xassert(tree->reason == GLP_ICUTGEN);
+            tree->reason = GLP_ICUTADDED;
+            tree->parm->cb_func(tree, tree->parm->cb_info);
+            tree->reason = GLP_ICUTGEN;
+         }
       }
       /* free working arrays */
       xfree(ind);
