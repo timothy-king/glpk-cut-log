@@ -1020,8 +1020,8 @@ static double generate(struct MIR *mir)
          mir->cut_cset[j] = 0;
       for (j = 1; j <= nint; j++)
       {  k = mir->cut_vec->ind[j];
-         xassert(1 <= k  && k <= n);
-         mir->cut_cset[k] = cset[j];
+         xassert(m <= k  && k <= m+n);
+         mir->cut_cset[k-m] = cset[j];
       }
 skip: /* free working arrays */
       xfree(u);
@@ -1239,6 +1239,7 @@ static void add_cut(glp_tree *tree, struct MIR *mir)
       ord = glp_ios_add_row(tree, NULL, GLP_RF_MIR, 0, len, ind, val, GLP_UP,
          mir->cut_rhs);
       ios_cut_set_aux(tree, ord, mir->agg_cnt, mir->agg_row, mir->agg_coeffs);
+      ios_cut_set_aux_mir(tree, ord, mir->cut_delta, n, mir->cut_cset);
 
       /** callback for a cut being added to the cut pool */
       printf("mir tree parm %p\n", tree->parm->cb_func);

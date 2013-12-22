@@ -1073,8 +1073,14 @@ int glp_ios_cut_get_aux_nrows(glp_tree *tree, int ord);
 /* gets the number of rows used to generate a cut. */
 
 
-void glp_ios_cut_get_aux_rows(glp_tree *tree, int ord, int rows[], double coeffs[]);
-  /* gets a cut as an input sequence of rows times coefficients. */
+void glp_ios_cut_get_aux_rows(glp_tree *tree, int ord,
+                              int rows[], double coeffs[]);
+/* gets a cut as an input sequence of rows times coefficients. */
+
+
+void glp_ios_cut_get_aux_mir(glp_tree *tree, int ord,
+                             char cset[], double *delta);
+/* gets mir cut specific information. */
 
 #ifdef __cplusplus
 }

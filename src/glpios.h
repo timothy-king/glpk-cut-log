@@ -421,6 +421,13 @@ struct IOSAUX
       int nrows;
       int *rows;
       double *mult;
+
+
+      char *mir_cset;
+      /* complimented set */
+      /* if this is NULL, it is implicitly all 0s */
+      double mir_delta;
+      /* the delta selected by a mir cut */
 };
 
 
@@ -641,7 +648,7 @@ int ios_choose_var(glp_tree *T, int *next);
 /* select variable to branch on */
 
 /* functions added to retrieve information */
-IOSAUX *ios_create_aux(int n);
+IOSAUX *ios_create_aux(int n, const int rows[], const double coeffs[]);
 /* creates an aux with n rows */
 
 void ios_delete_aux(IOSAUX *aux);
@@ -654,6 +661,8 @@ void ios_cut_set_single_aux(glp_tree *T, int ord, int j);
 void ios_cut_set_aux(glp_tree *T, int ord, int n,
                      const int rows[], const double coeffs[]);
 /* sets an arbitrary aux sum */
+void ios_cut_set_aux_mir(glp_tree *T, int ord, double delta,
+                         int n, const char cset[]);
 
 #endif
 
