@@ -410,22 +410,17 @@ struct IOSCUT
 };
 
 struct IOSAUX
-{     /* aux (auxillary source information for each cut)
+{
+      /* aux (auxillary source information for each cut)
+       * Each cut operates on a sum of rows
        * Each cut operates on a row that can be described using
        * a current row or a previous cut.
        * To generalize, we assume each row is a sum of two rows:
        *   row[r]* r_mult + pool[c] * c_mult
        */
-      int r;
-      /* variable corresponding the source row in the current lp. */
-      double r_mult;
-      /* multiple for the row corresponding to j. */
-
-      int c;
-      /* ordinal of a cut in the current cut pool that is the
-       * source of the current cut. */
-      double c_mult;
-      /* multiple for the row corresponding to c. */
+      int nrows;
+      int *rows;
+      double *mult;
 };
 
 
@@ -645,10 +640,20 @@ int ios_choose_node(glp_tree *T);
 int ios_choose_var(glp_tree *T, int *next);
 /* select variable to branch on */
 
-IOSAUX *ios_create_aux();
-void ios_delete_aux(IOSAUX *aux);
-void ios_cut_set_gmi_aux(glp_tree *T, int ord, int j);
+/* functions added to retrieve information */
+IOSAUX *ios_create_aux(int n);
+/* creates an aux with n rows */
 
+void ios_delete_aux(IOSAUX *aux);
+/* deletes an aux */
+
+void ios_cut_set_single_aux(glp_tree *T, int ord, int j);
+/* sets the aux of row ord to be a single row j */
+
+
+void ios_cut_set_aux(glp_tree *T, int ord, int n,
+                     const int rows[], const double coeffs[]);
+/* sets an arbitrary aux sum */
 
 #endif
 

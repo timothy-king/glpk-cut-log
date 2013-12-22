@@ -100,6 +100,19 @@ struct MIR
       /* sparse vector of cutting plane coefficients, alpha[k] */
       double cut_rhs;
       /* right-hand size of the cutting plane, beta */
+
+      /*-------------------------------------------------------------*/
+      /* Extras I've added to reproduce a cut externally */
+      char *cut_cset; /* char cut_vec[1:n]; */
+      /* cut_cset[k], 1 <= k <= n, is set to true if structural
+         variable x[k] was complemented in the cut:
+         0 - x[k] has been not been complemented
+         non 0 - x[k] has been complemented */
+      double cut_delta;
+      /* the delta used for generating the cut */
+
+      double *agg_coeffs;
+      /* coefficints used to multiply agg_coeffs */
 };
 
 /***********************************************************************
@@ -313,6 +326,11 @@ void *ios_mir_init(glp_tree *tree)
       mir->subst = xcalloc(1+m+n, sizeof(char));
       mir->mod_vec = ios_create_vec(m+n);
       mir->cut_vec = ios_create_vec(m+n);
+
+      /* added */
+      mir->cut_cset = xcalloc(1+m+n, sizeof(char));
+      mir->agg_coeffs = xcalloc(1+MAXAGGR, sizeof(double));
+
       /* set global row attributes */
       set_row_attrib(tree, mir);
       /* set global column attributes */
@@ -405,6 +423,9 @@ static void initial_agg_row(glp_tree *tree, struct MIR *mir, int i)
       mir->skip[i] = 2;
       mir->agg_cnt = 1;
       mir->agg_row[1] = i;
+
+      mir->agg_coeffs[1] = +1.0;
+
       /* use x[i] - sum a[i,j] * x[m+j] = 0, where x[i] is auxiliary
          variable of row i, x[m+j] are structural variables */
       ios_clear_vec(mir->agg_vec);
@@ -784,10 +805,10 @@ static int cmir_cmp(const void *p1, const void *p2)
 
 static double cmir_sep(const int n, const double a[], const double b,
       const double u[], const double x[], const double s,
-      double alpha[], double *beta, double *gamma)
+      double alpha[], double *beta, double *gamma,
+      double* delta, char cset[])
 {     int fail, j, k, nv, v;
-      double delta, eps, d_try[1+3], r, r_best;
-      char *cset;
+      double eps, d_try[1+3], r, r_best;
       struct vset *vset;
       /* allocate working arrays */
       cset = xcalloc(1+n, sizeof(char));
@@ -796,7 +817,7 @@ static double cmir_sep(const int n, const double a[], const double b,
       for (j = 1; j <= n; j++)
          cset[j] = (char)(x[j] >= 0.5 * u[j]);
       /* choose initial delta */
-      r_best = delta = 0.0;
+      r_best = (*delta) = 0.0;
       for (j = 1; j <= n; j++)
       {  xassert(a[j] != 0.0);
          /* if x[j] is close to its bounds, skip it */
@@ -809,16 +830,16 @@ static double cmir_sep(const int n, const double a[], const double b,
          /* compute violation */
          r = - (*beta) - (*gamma) * s;
          for (k = 1; k <= n; k++) r += alpha[k] * x[k];
-         if (r_best < r) r_best = r, delta = fabs(a[j]);
+         if (r_best < r) r_best = r, (*delta) = fabs(a[j]);
       }
       if (r_best < 0.001) r_best = 0.0;
       if (r_best == 0.0) goto done;
-      xassert(delta > 0.0);
+      xassert((*delta) > 0.0);
       /* try to increase violation by dividing delta by 2, 4, and 8,
          respectively */
-      d_try[1] = delta / 2.0;
-      d_try[2] = delta / 4.0;
-      d_try[3] = delta / 8.0;
+      d_try[1] = (*delta) / 2.0;
+      d_try[2] = (*delta) / 4.0;
+      d_try[3] = (*delta) / 8.0;
       for (j = 1; j <= 3; j++)
       {  /* construct c-MIR inequality */
          fail = cmir_ineq(n, a, b, u, cset, d_try[j], alpha, beta,
@@ -827,7 +848,7 @@ static double cmir_sep(const int n, const double a[], const double b,
          /* compute violation */
          r = - (*beta) - (*gamma) * s;
          for (k = 1; k <= n; k++) r += alpha[k] * x[k];
-         if (r_best < r) r_best = r, delta = d_try[j];
+         if (r_best < r) r_best = r, (*delta) = d_try[j];
       }
       /* build subset of variables lying strictly between their bounds
          and order it by nondecreasing values of |x[j] - u[j]/2| */
@@ -849,7 +870,7 @@ static double cmir_sep(const int n, const double a[], const double b,
          /* replace x[j] by its complement or vice versa */
          cset[j] = (char)!cset[j];
          /* construct c-MIR inequality */
-         fail = cmir_ineq(n, a, b, u, cset, delta, alpha, beta, gamma);
+         fail = cmir_ineq(n, a, b, u, cset, (*delta), alpha, beta, gamma);
          /* restore the variable */
          cset[j] = (char)!cset[j];
          /* do not replace the variable in case of failure */
@@ -860,10 +881,11 @@ static double cmir_sep(const int n, const double a[], const double b,
          if (r_best < r) r_best = r, cset[j] = (char)!cset[j];
       }
       /* construct the best c-MIR inequality chosen */
-      fail = cmir_ineq(n, a, b, u, cset, delta, alpha, beta, gamma);
+      fail = cmir_ineq(n, a, b, u, cset, (*delta), alpha, beta, gamma);
       xassert(!fail);
+
 done: /* free working arrays */
-      xfree(cset);
+
       xfree(vset);
       /* return to the calling routine */
       return r_best;
@@ -874,7 +896,8 @@ static double generate(struct MIR *mir)
       int m = mir->m;
       int n = mir->n;
       int j, k, kk, nint;
-      double s, *u, *x, *alpha, r_best = 0.0, b, beta, gamma;
+      double s, *u, *x, *alpha, r_best = 0.0, b, beta, gamma, delta;
+      char *cset;
       ios_copy_vec(mir->cut_vec, mir->mod_vec);
       mir->cut_rhs = mir->mod_rhs;
       /* remove small terms, which can appear due to substitution of
@@ -923,6 +946,7 @@ static double generate(struct MIR *mir)
       u = xcalloc(1+nint, sizeof(double));
       x = xcalloc(1+nint, sizeof(double));
       alpha = xcalloc(1+nint, sizeof(double));
+      cset = xcalloc(1+nint, sizeof(char));
       /* determine u and x */
       for (j = 1; j <= nint; j++)
       {  k = mir->cut_vec->ind[j];
@@ -973,7 +997,7 @@ static double generate(struct MIR *mir)
       /* apply heuristic to obtain most violated c-MIR inequality */
       b = mir->cut_rhs;
       r_best = cmir_sep(nint, mir->cut_vec->val, b, u, x, s, alpha,
-         &beta, &gamma);
+         &beta, &gamma, &delta, cset);
       if (r_best == 0.0) goto skip;
       xassert(r_best > 0.0);
       /* convert to raw cut */
@@ -988,10 +1012,22 @@ static double generate(struct MIR *mir)
 #if _MIR_DEBUG
       ios_check_vec(mir->cut_vec);
 #endif
+      /* added */
+      mir->cut_delta = delta;
+      // this is not a great place for resetting the array,
+      // but it should be sufficient
+      for (j = 1; j <= n;  j++)
+         mir->cut_cset[j] = 0;
+      for (j = 1; j <= nint; j++)
+      {  k = mir->cut_vec->ind[j];
+         xassert(1 <= k  && k <= n);
+         mir->cut_cset[k] = cset[j];
+      }
 skip: /* free working arrays */
       xfree(u);
       xfree(x);
       xfree(alpha);
+      xfree(cset);
 done: return r_best;
 }
 
@@ -1199,11 +1235,13 @@ static void add_cut(glp_tree *tree, struct MIR *mir)
       ios_add_cut_row(tree, pool, GLP_RF_MIR, len, ind, val, GLP_UP,
          mir->cut_rhs);
 #else
-      glp_ios_add_row(tree, NULL, GLP_RF_MIR, 0, len, ind, val, GLP_UP,
+      int ord;
+      ord = glp_ios_add_row(tree, NULL, GLP_RF_MIR, 0, len, ind, val, GLP_UP,
          mir->cut_rhs);
+      ios_cut_set_aux(tree, ord, mir->agg_cnt, mir->agg_row, mir->agg_coeffs);
 
       /** callback for a cut being added to the cut pool */
-      printf("tree parm %p\n", tree->parm->cb_func);
+      printf("mir tree parm %p\n", tree->parm->cb_func);
       if (tree->parm->cb_func != NULL)
       {  xassert(tree->reason == GLP_ICUTGEN);
          tree->reason = GLP_ICUTADDED;
@@ -1225,6 +1263,7 @@ static int aggregate_row(glp_tree *tree, struct MIR *mir)
       IOSVEC *v;
       int ii, j, jj, k, kk, kappa = 0, ret = 0;
       double d1, d2, d, d_max = 0.0;
+      double guass_coeff;
       /* choose appropriate structural variable in the aggregated row
          to be substituted */
       for (j = 1; j <= mir->agg_vec->nnz; j++)
@@ -1309,8 +1348,9 @@ static int aggregate_row(glp_tree *tree, struct MIR *mir)
       xassert(j != 0);
       jj = v->pos[kappa];
       xassert(jj != 0);
-      ios_linear_comb(mir->agg_vec,
-         - mir->agg_vec->val[j] / v->val[jj], v);
+      guass_coeff = - mir->agg_vec->val[j] / v->val[jj];
+      mir->agg_coeffs[mir->agg_cnt] = guass_coeff;
+      ios_linear_comb(mir->agg_vec, guass_coeff, v);
       ios_delete_vec(v);
       ios_set_vj(mir->agg_vec, kappa, 0.0);
 #if _MIR_DEBUG
@@ -1449,6 +1489,11 @@ void ios_mir_term(void *gen)
       xfree(mir->subst);
       ios_delete_vec(mir->mod_vec);
       ios_delete_vec(mir->cut_vec);
+
+      /* added */
+      xfree(mir->cut_cset);
+      xfree(mir->agg_coeffs);
+
       xfree(mir);
       return;
 }

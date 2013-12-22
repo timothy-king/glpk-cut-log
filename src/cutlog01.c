@@ -12,17 +12,6 @@ int glp_get_it_cnt(glp_prob *P){
   }
 }
 
-
-/* int glp_ios_cut_klass(glp_tree *T){ */
-/*   if(T == NULL){ */
-/*     return 0; */
-/*   }else{ */
-/*     return T->cut_klass; */
-/*   } */
-/* } */
-/* /\* determine the type of cut routine *\/ */
-
-
 int glp_ios_get_cut(glp_tree *T, int i, int* ind, double* val, int* klass, int* type, double* rhs){
   xassert(T != NULL);
 
@@ -35,6 +24,9 @@ int glp_ios_get_cut(glp_tree *T, int i, int* ind, double* val, int* klass, int* 
     xerror("glp_ios_get_cut: not called during cut added.\n");
   }
   cut = ios_find_row(T->local, i);
+  if ( cut == NULL ) {
+    xerror("glp_ios_get_cut: called with an invalid index.");
+  }
   len = 0;
   for(len = 0, aij = cut->ptr; aij != NULL; aij = aij->next)
   {
@@ -49,52 +41,95 @@ int glp_ios_get_cut(glp_tree *T, int i, int* ind, double* val, int* klass, int* 
 }
 
 
-IOSAUX *ios_create_aux(){
+IOSAUX *ios_create_aux(int n){
   IOSAUX *aux;
   aux = xmalloc(sizeof(IOSAUX));
-  aux->r = 0;
-  aux->r_mult = 0.0;
-  aux->c = 0;
-  aux->c_mult = 0.0;
+  aux->nrows = n;
+  aux->rows = xcalloc(1+n, sizeof(int));
+  aux->mult = xcalloc(1+n, sizeof(double));
   return aux;
 }
 
 void ios_delete_aux(IOSAUX *aux){
   xassert(aux != NULL);
+  xfree(aux->rows);
+  xfree(aux->mult);
   xfree(aux);
   return;
 }
 
-static void cut_set_gmi_aux(IOSCUT *cut, int j){
-  xassert(cut != NULL);
-  if(cut->aux == NULL){
-    cut->aux = ios_create_aux();
+static void cut_set_aux(IOSCUT *cut, int n,
+                        const int rows[], const double coeffs[]){
+  int i;
+  xassert( cut != NULL );
+  if( cut->aux != NULL ) {
+    ios_delete_aux(cut-> aux);
   }
-  cut->aux->r = j;
-  cut->aux->r_mult = +1.0;
-  cut->aux->c = 0;
-  cut->aux->c_mult = 0.0;
+
+  cut->aux = ios_create_aux(n);
+  xassert( cut->aux->nrows == n );
+  for ( i = 1; i <= n; i++)
+  {  cut->aux->rows[i] = rows[i];
+     cut->aux->mult[i] = coeffs[i];
+  }
 }
 
-void ios_cut_set_gmi_aux(glp_tree *T, int ord, int j){
+void ios_cut_set_single_aux(glp_tree *T, int ord, int j){
   IOSCUT *cut;
   cut = ios_find_row(T->local, ord);
   xassert(cut != NULL);
-  cut_set_gmi_aux(cut, j);
+
+  /* set up arrays */
+  int ind[1+1];
+  double coeffs[1+1];
+  ind[1] = j;
+  coeffs[1] = +1.0;
+
+  /* call general procedure */
+  cut_set_aux(cut, 1, ind, coeffs);
 }
 
-void glp_ios_cut_get_aux(glp_tree *tree, int ord, int *r, double *rm, int *c, double *cm){
-  IOSCUT* cut;
+void ios_cut_set_aux(glp_tree *T, int ord, int n,
+                     const int rows[], const double coeffs[]){
+  IOSCUT *cut;
+  cut = ios_find_row(T->local, ord);
+  xassert(cut != NULL);
+  cut_set_aux(cut, n, rows, coeffs);
+}
+
+int glp_ios_cut_get_aux_nrows(glp_tree *tree, int ord){
+  IOSCUT *cut;
+  IOSAUX *aux;
   if (tree->reason != GLP_ICUTADDED){
-    xerror("glp_ios_cut_get_gmi_aux: not called during cut added.\n");
+    xerror("glp_ios_cut_get_aux_nrows: not called during cut added.\n");
   }
   cut = ios_find_row(tree->local, ord);
-  xassert(cut != NULL);
-  if(cut->aux != NULL){
-    if(r  != NULL){ *r  = cut->aux->r; }
-    if(rm != NULL){ *rm = cut->aux->r_mult; }
-    if(c  != NULL){ *c  = cut->aux->c; }
-    if(cm != NULL){ *cm = cut->aux->c_mult; }
+  if ( cut == NULL ){
+    xerror("glp_ios_cut_get_aux_nrows: not called on a valid cut.\n");
+  }
+  aux = cut->aux;
+  return (aux == NULL) ? 0 : aux->nrows;
+}
+
+void glp_ios_cut_get_aux_rows(glp_tree *tree, int ord,
+                              int rows[], double coeffs[]){
+  IOSCUT *cut;
+  IOSAUX *aux;
+  int j, nrows;
+  if (tree->reason != GLP_ICUTADDED){
+    xerror("glp_ios_cut_get_aux_rows: not called during cut added.\n");
+  }
+  cut = ios_find_row(tree->local, ord);
+  if ( cut == NULL ){
+    xerror("glp_ios_cut_get_aux_rows: not called on a valid cut.\n");
+  }
+  aux = cut->aux;
+  if( aux != NULL ){
+    nrows = aux->nrows;
+    for ( j = 1; j <= nrows; j++ )
+    {  if ( rows != NULL ) { rows[j] = aux->rows[j]; }
+       if ( coeffs != NULL ) { coeffs[j] = aux->mult[j]; }
+    }
   }
   return;
 }

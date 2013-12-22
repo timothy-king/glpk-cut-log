@@ -224,7 +224,7 @@ skip:    ;
       int ord;
       ord = glp_ios_add_row(tree, NULL, GLP_RF_GMI, 0, len, ind, val,
                             GLP_LO, rhs);
-      ios_cut_set_gmi_aux(tree, ord, input_j);
+      ios_cut_set_single_aux(tree, ord, input_j);
 
       /** callback for a cut being added to the cut pool */
       if (tree->parm->cb_func != NULL)

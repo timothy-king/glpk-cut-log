@@ -1069,7 +1069,12 @@ int glp_get_it_cnt(glp_prob *P);
 int glp_ios_get_cut(glp_tree *T, int i, int ind[], double val[], int* klass, int* type, double* rhs);
 /* determine reason for calling the callback routine */
 
-void glp_ios_cut_get_aux(glp_tree *T, int i, int *r, double *rm, int *c, double *cm);
+int glp_ios_cut_get_aux_nrows(glp_tree *tree, int ord);
+/* gets the number of rows used to generate a cut. */
+
+
+void glp_ios_cut_get_aux_rows(glp_tree *tree, int ord, int rows[], double coeffs[]);
+  /* gets a cut as an input sequence of rows times coefficients. */
 
 #ifdef __cplusplus
 }
