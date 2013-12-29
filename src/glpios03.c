@@ -1219,6 +1219,14 @@ more: /* minor loop starts here */
          ios_process_cuts(T);
          T->reason = 0;
       }
+      /* if the local cut pool is not empty and the callback func is there,
+         this gives the callback the chance to see what was selected. */
+      if (T->parm->cb_func != NULL && T->local->size > 0)
+      {  xassert(T->reason == 0);
+         T->reason = GLP_ICUTSELECT;
+         T->parm->cb_func(T, T->parm->cb_info);
+         T->reason = 0;
+      }
       /* clear the local cut pool */
       ios_clear_pool(T, T->local);
       /* perform re-optimization, if necessary */

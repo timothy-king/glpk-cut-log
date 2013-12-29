@@ -48,6 +48,7 @@ IOSAUX *ios_create_aux(int n, const int rows[], const double coeffs[]){
   aux->nrows = n;
   aux->rows = xcalloc(1+n, sizeof(int));
   aux->mult = xcalloc(1+n, sizeof(double));
+  aux->selected = -1;
   aux->mir_cset = NULL;
 
   for ( i = 1; i <= n; i++)
@@ -93,7 +94,7 @@ static void cut_set_aux_mir(IOSAUX *aux, double delta,
   for ( i = 1; i <= n; i++)
   {  aux->mir_cset[i] = cset[i];
   }
-  
+
   aux->mir_delta = delta;
 }
 
@@ -191,4 +192,52 @@ void glp_ios_cut_get_aux_mir(glp_tree *tree, int ord,
       cset[j] = (aux->mir_cset == NULL) ? 0 : aux->mir_cset[j];
     }
   }
+}
+
+void ios_cut_set_selected(IOSCUT *cut, int sel){
+#ifdef CUT_DEBUG
+  static int i = 0;
+  ++i;
+  printf("ios_cut_set_selected: %d %d %p\n", i, sel, cut);
+#endif
+
+  IOSAUX *aux;
+  aux = cut->aux;
+  if ( aux != NULL ){
+    aux->selected = sel;
+  }
+}
+
+int glp_ios_selected_cuts(glp_tree *tree, int ords[], int sel[]){
+  int len, j, N, s;
+  IOSPOOL* pool;
+  IOSCUT* cut;
+  IOSAUX* aux;
+  if ( tree == NULL ){
+    xerror("glp_ios_selected_cuts: not called with a valid tree.\n");
+  }
+  if ( tree->reason != GLP_ICUTSELECT ){
+    xerror("glp_ios_selected_cuts: not called during cut selected.\n");
+  }
+
+  pool = tree->local;
+  if ( pool == NULL ){
+    xerror("glp_ios_selected_cuts: called on a malformed tree.\n");
+  }
+
+  for (len = 0, j = 1, cut = pool->head; cut != NULL; cut = cut->next, j++)
+  {  aux = cut->aux;
+#ifdef CUT_DEBUG
+     printf("glp_ios_selected_cuts: %d %p\n", j, cut);
+#endif
+     if ( aux != NULL )
+     { s = aux->selected;
+       if ( s >= 0 )
+       {  len++;
+          if (ords != NULL) { ords[len] = j; }
+          if (sel != NULL)  { sel[len] = s; }
+       }
+     }
+  }
+  return len;
 }

@@ -453,8 +453,14 @@ void glp_ios_row_attr(glp_tree *tree, int i, glp_attr *attr)
 
 int glp_ios_pool_size(glp_tree *tree)
 {     /* determine current size of the cut pool */
-      if (tree->reason != GLP_ICUTGEN && tree->reason != GLP_ICUTADDED )
-         xerror("glp_ios_pool_size: operation not allowed\n");
+      switch(tree->reason)
+      {  case GLP_ICUTGEN:
+         case GLP_ICUTADDED:
+         case GLP_ICUTSELECT:
+           break;
+         default:
+           xerror("glp_ios_pool_size: operation not allowed\n");
+      }
       xassert(tree->local != NULL);
       return tree->local->size;
 }

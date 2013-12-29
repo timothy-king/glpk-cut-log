@@ -422,6 +422,9 @@ struct IOSAUX
       int *rows;
       double *mult;
 
+      int selected;
+      /* when < 0 this has not yet been turned into a row
+         when >=0 this is the id of the row added. */
 
       char *mir_cset;
       /* complimented set */
@@ -661,8 +664,13 @@ void ios_cut_set_single_aux(glp_tree *T, int ord, int j);
 void ios_cut_set_aux(glp_tree *T, int ord, int n,
                      const int rows[], const double coeffs[]);
 /* sets an arbitrary aux sum */
+
 void ios_cut_set_aux_mir(glp_tree *T, int ord, double delta,
                          int n, const char cset[]);
+/* sets the extra mir information */
+
+void ios_cut_set_selected(IOSCUT *cut, int i);
+/* the cut has been added as row i */
 
 #endif
 

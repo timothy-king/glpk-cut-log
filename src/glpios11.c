@@ -193,6 +193,9 @@ void ios_process_cuts(glp_tree *T)
          glp_set_mat_row(T->mip, i, len, ind, val);
          xassert(cut->type == GLP_LO || cut->type == GLP_UP);
          glp_set_row_bnds(T->mip, i, cut->type, cut->rhs, cut->rhs);
+
+         /* setting this as selected */
+         ios_cut_set_selected(cut, i);
       }
       /* free working arrays */
       xfree(info);

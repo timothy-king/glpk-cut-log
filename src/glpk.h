@@ -230,6 +230,7 @@ typedef struct
 #define GLP_ISELECT     0x06  /* request for subproblem selection */
 #define GLP_IPREPRO     0x07  /* request for preprocessing */
 #define GLP_ICUTADDED   0x08  /* cut was added to the pool */
+#define GLP_ICUTSELECT  0x09  /* cuts were selected as rows */
 
 /* branch selection indicator: */
 #define GLP_NO_BRNCH       0  /* select no branch */
@@ -1081,6 +1082,10 @@ void glp_ios_cut_get_aux_rows(glp_tree *tree, int ord,
 void glp_ios_cut_get_aux_mir(glp_tree *tree, int ord,
                              char cset[], double *delta);
 /* gets mir cut specific information. */
+
+int glp_ios_selected_cuts(glp_tree *tree, int ords[], int sel[]);
+/* gets the list of selected cuts.
+   Can only be called when GLP_ICUTSELECT */
 
 #ifdef __cplusplus
 }
