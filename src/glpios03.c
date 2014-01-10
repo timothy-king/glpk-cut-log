@@ -358,12 +358,12 @@ static void fix_by_red_cost(glp_tree *T)
 *  2 - both branches are hopeless and have been pruned; new subproblem
 *      selection is needed to continue the search. */
 
-static int branch_on(glp_tree *T, int j, int next)
+static int branch_on(glp_tree *T, int j, int next, int clone[], int* to_up)
 {     glp_prob *mip = T->mip;
       IOSNPD *node;
       int m = mip->m;
       int n = mip->n;
-      int type, dn_type, up_type, dn_bad, up_bad, p, ret, clone[1+2];
+      int type, dn_type, up_type, dn_bad, up_bad, p, ret;
       double lb, ub, beta, new_ub, new_lb, dn_lp, up_lp, dn_bnd, up_bnd;
       /* determine bounds and value of x[j] in optimal solution to LP
          relaxation of the current subproblem */
@@ -431,6 +431,7 @@ static int branch_on(glp_tree *T, int j, int next)
          else
             xassert(mip != mip);
          ret = 1;
+         to_up = 0;
          goto done;
       }
       else if (dn_bad)
@@ -449,6 +450,7 @@ static int branch_on(glp_tree *T, int j, int next)
          else
             xassert(mip != mip);
          ret = 1;
+         *to_up = 1;
          goto done;
       }
       /* both down- and up-branches seem to be hopeful */
@@ -784,6 +786,7 @@ static void display_cut_info(glp_tree *T)
 
 int ios_driver(glp_tree *T)
 {     int p, curr_p, p_stat, d_stat, ret;
+      int branch_clones[1 + 2];
 #if 1 /* carry out to glp_tree */
       int pred_p = 0;
       /* if the current subproblem has been just created due to
@@ -1010,6 +1013,12 @@ more: /* minor loop starts here */
          if (T->parm->msg_lev >= GLP_MSG_DBG)
             xprintf("LP relaxation has no feasible solution\n");
          /* prune the branch */
+         if (T->parm->cb_func != NULL)
+         {  xassert(T->reason == 0);
+            T->reason = GLP_LI_CLOSE;
+            T->parm->cb_func(T, T->parm->cb_info);
+            T->reason = 0;
+         }
          goto fath;
       }
       else
@@ -1263,7 +1272,32 @@ more: /* minor loop starts here */
          T->br_var = ios_choose_var(T, &T->br_sel);
       /* perform actual branching */
       curr_p = T->curr->p;
-      ret = branch_on(T, T->br_var, T->br_sel);
+      ret = branch_on(T, T->br_var, T->br_sel, branch_clones, &T->br_to_up);
+      if (T->parm->cb_func != NULL)
+      {  xassert(T->reason == 0);
+         xassert(T->br_node == 0);
+         xassert(T->dn_child == 0);
+         xassert(T->up_child == 0);
+         // record a branch here
+         T->reason = GLP_LI_BRANCH;
+         // at this point T->br_var is the branching variable
+         T->br_node = curr_p;
+         T->br_result = ret;
+         if(ret == 0){
+           T->dn_child = branch_clones[1];
+           T->up_child = branch_clones[2];
+         }
+         T->parm->cb_func(T, T->parm->cb_info);
+         T->reason = 0;
+         T->br_node = 0;
+         T->dn_child = 0;
+         T->up_child = 0;
+         if (T->stop)
+         {  ret = GLP_ESTOP;
+            goto done;
+         }
+      }
+
       T->br_var = T->br_sel = 0;
       if (ret == 0)
       {  /* both branches have been created */

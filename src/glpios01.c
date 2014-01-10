@@ -160,6 +160,12 @@ glp_tree *ios_create_tree(glp_prob *mip, const glp_iocp *parm)
       /* create the root subproblem, which initially is identical to
          the original MIP */
 
+      tree->br_result = 0;
+      tree->br_to_up = 0;
+      tree->br_node = 0;
+      tree->dn_child = 0;
+      tree->up_child = 0;
+
       new_node(tree, NULL);
       return tree;
 }
@@ -637,6 +643,9 @@ static IOSNPD *new_node(glp_tree *tree, IOSNPD *parent)
       tree->a_cnt++;
       tree->n_cnt++;
       tree->t_cnt++;
+
+      node->ord = tree->t_cnt;
+
       /* increase the number of child subproblems */
       if (parent == NULL)
          xassert(p == 1);

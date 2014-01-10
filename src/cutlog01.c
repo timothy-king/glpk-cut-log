@@ -241,3 +241,82 @@ int glp_ios_selected_cuts(glp_tree *tree, int ords[], int sel[]){
   }
   return len;
 }
+
+int glp_ios_branch_log(glp_tree *tree, double *br_val, int* parent, int* dn, int* up){
+  IOSNPD *node;
+  int br_result, br_var;
+  int p, d, u;
+  double v;
+  glp_prob *mip;
+  if ( tree == NULL ){
+    xerror("glp_ios_branch_log: not called with a valid tree \n");
+  }
+  if ( tree->reason != GLP_LI_BRANCH ){
+    xerror("glp_ios_branch_log: not called during GLP_LI_BRANCH \n");
+  }
+  mip = tree->mip;
+  if ( mip == NULL ){
+    xerror("glp_ios_branch_log: not called with a valid tree\n");
+  }
+  br_result = tree->br_result;
+  br_var = tree->br_var;
+  switch(br_result){
+  case 0:
+    p = tree->br_node;
+    node = tree->slot[p].node;
+    break;
+  case 1:
+  case 2:
+    node = tree->curr;
+    p = node->p;
+    break;
+  default:
+    xerror("glp_ios_branch_log: br_result is not properly set \n");
+  }
+  if( node == NULL ){
+    xerror("glp_ios_branch_log: not called with a valid tree \n");
+  }
+  switch(br_result){
+  case 0:
+    v = node->br_val;
+    d = tree->dn_child;
+    u = tree->up_child;
+    break;
+  case 1:
+    v = mip->col[br_var]->prim;
+    if(tree->br_to_up){
+      d = -1;
+      u = p;
+    }else{
+      d = p;
+      u = -1;
+    }
+    break;
+  case 2:
+    v = mip->col[br_var]->prim;
+    d = -1;
+    u = -1;
+    break;
+  default:
+    xerror("glp_ios_branch_log: not called with a valid tree \n");
+  }
+
+  if(br_val != NULL){ *br_val = v; }
+  if(parent != NULL){ *parent = p; }
+  if(dn != NULL){ *dn = d; }
+  if(up != NULL){ *up = u; }
+
+  return br_var;
+}
+
+int glp_ios_node_ord(glp_tree *tree, int p){
+  IOSNPD *node;
+  if ( tree == NULL ){
+    xerror("glp_ios_node_ord: not called with a valid tree.\n");
+  }
+  if (!(1 <= p && p <= tree->nslots)){
+    xerror("glp_ios_node_ord: not called with a valid p.\n");
+  }
+  node = tree->slot[p].node;
+  return node->ord;
+}

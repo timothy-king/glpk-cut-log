@@ -221,8 +221,15 @@ struct glp_tree
       int child;
       /* subproblem reference number corresponding to br_sel */
 
-  /* start of cut log extras */
-  //int cut_klass;
+      /* start of cut log extras */
+      int br_result;
+      int br_to_up;
+      int br_node;
+      /* subproblem reference number for the just branched node.*/
+      int dn_child;
+      /* subproblem reference number for the just created down node */
+      int up_child;
+      /* subproblem reference number for the just created up node */
 };
 
 struct IOSLOT
@@ -235,6 +242,8 @@ struct IOSLOT
 
 struct IOSNPD
 {     /* node subproblem descriptor */
+      int ord;
+      /* this is a unique ordinal for each subproblem  */
       int p;
       /* subproblem reference number (it is the index to corresponding
          slot, i.e. slot[p] points to this descriptor) */

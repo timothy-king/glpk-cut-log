@@ -231,6 +231,8 @@ typedef struct
 #define GLP_IPREPRO     0x07  /* request for preprocessing */
 #define GLP_ICUTADDED   0x08  /* cut was added to the pool */
 #define GLP_ICUTSELECT  0x09  /* cuts were selected as rows */
+#define GLP_LI_BRANCH   0x10  /* a branch was made */
+#define GLP_LI_CLOSE    0x11  /* an active node was closed */
 
 /* branch selection indicator: */
 #define GLP_NO_BRNCH       0  /* select no branch */
@@ -1086,6 +1088,18 @@ void glp_ios_cut_get_aux_mir(glp_tree *tree, int ord,
 int glp_ios_selected_cuts(glp_tree *tree, int ords[], int sel[]);
 /* gets the list of selected cuts.
    Can only be called when GLP_ICUTSELECT */
+
+
+int glp_ios_branch_log(glp_tree *tree, double *val, int* parent, int* dn, int* up);
+/* can only be called when GLP_LI_BRANCH.
+ * If id is non-null, returns the id of the structural variable branched upon.
+ * If val is non-null, it is set to the value branched upon.
+ * If parent is non-null, it is set to node id of the node branched upon.
+ * If dn is non-null, it is set to node id of the newly created down node.
+ * If up is non-null, it is set to node id of the newly created up node.
+ */
+
+int glp_ios_node_ord(glp_tree *tree, int node_p);
 
 #ifdef __cplusplus
 }
