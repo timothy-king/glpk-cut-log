@@ -1081,9 +1081,15 @@ void glp_ios_cut_get_aux_rows(glp_tree *tree, int ord,
 /* gets a cut as an input sequence of rows times coefficients. */
 
 
-void glp_ios_cut_get_aux_mir(glp_tree *tree, int ord,
-                             char cset[], double *delta);
-/* gets mir cut specific information. */
+void glp_ios_cut_get_mir_cset(glp_tree *tree, int ord, char cset[]);
+/* gets mir cut complement set. */
+double glp_ios_cut_get_mir_delta(glp_tree *tree, int ord);
+/* gets mir cut delta. */
+void glp_ios_cut_get_mir_subst(glp_tree *tree, int ord, char subst[]);
+/* gets mir cut substition information. */
+void glp_ios_cut_get_mir_virtual_rows(glp_tree *tree, int ord,
+                                      int vlb_rows[], int vub_rows[]);
+/* gets mir cut virtual bounds rows. */
 
 int glp_ios_selected_cuts(glp_tree *tree, int ords[], int sel[]);
 /* gets the list of selected cuts.

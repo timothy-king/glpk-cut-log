@@ -65,6 +65,9 @@ void ios_delete_aux(IOSAUX *aux){
   xfree(aux->mult);
   if( aux->mir_cset != NULL ){
     xfree(aux->mir_cset);
+     xfree(aux->mir_subst);
+     xfree(aux->mir_vlb_rows);
+     xfree(aux->mir_vub_rows);
   }
   xfree(aux);
   return;
@@ -82,28 +85,45 @@ static void cut_set_aux(IOSCUT *cut, int n,
   xassert( cut->aux->nrows == n );
 }
 
-static void cut_set_aux_mir(IOSAUX *aux, double delta,
-                            int n, const char cset[]){
+static void cut_set_aux_mir(IOSAUX *aux, double delta, int m, int n,
+                            const char cset[], const char subst[],
+                            const int vlbrs[], const int vubrs[]){
   int i;
   xassert( aux != NULL );
   if ( aux->mir_cset != NULL )
   {  xfree(aux->mir_cset);
+     xfree(aux->mir_subst);
+     xfree(aux->mir_vlb_rows);
+     xfree(aux->mir_vub_rows);
   }
 
-  aux->mir_cset = xcalloc(1+n, sizeof(char));
-  for ( i = 1; i <= n; i++)
+  aux->mir_cset     = xcalloc(1+n+m, sizeof(char));
+  aux->mir_subst    = xcalloc(1+n+m, sizeof(char));
+  aux->mir_vlb_rows = xcalloc(1+n+m, sizeof(int));
+  aux->mir_vub_rows = xcalloc(1+n+m, sizeof(int));
+
+  for ( i = 1; i <= n+m; i++)
   {  aux->mir_cset[i] = cset[i];
+     aux->mir_subst[i] = subst[i];
+     aux->mir_vlb_rows[i] = vlbrs[i];
+     aux->mir_vub_rows[i] = vubrs[i];
   }
 
   aux->mir_delta = delta;
 }
 
 void ios_cut_set_aux_mir(glp_tree *T, int ord, double delta,
-                         int n, const char cset[]){
+                         const char cset[], const char subst[],
+                         const int vlbrs[], const int vubrs[]){
+  int m, n;
   IOSCUT *cut;
+  glp_prob *mip;
+  mip = T->mip;
+  m = mip->m;
+  n = mip->n;
   cut = ios_find_row(T->local, ord);
   xassert(cut != NULL);
-  cut_set_aux_mir(cut->aux, delta, n, cset);
+  cut_set_aux_mir(cut->aux, delta, m, n, cset, subst, vlbrs, vubrs);
 }
 
 void ios_cut_set_single_aux(glp_tree *T, int ord, int j){
@@ -167,11 +187,17 @@ void glp_ios_cut_get_aux_rows(glp_tree *tree, int ord,
 }
 
 
-void glp_ios_cut_get_aux_mir(glp_tree *tree, int ord,
-                             char *cset, double *delta){
+void glp_ios_cut_get_mir_subst(glp_tree *tree, int ord, char subst[]);
+/* gets mir cut substition information. */
+void glp_ios_cut_get_mir_virtual_rows(glp_tree *tree, int ord,
+                                      int vlb[], int vub[]);
+/* gets mir cut virtual bounds rows. */
+
+void glp_ios_cut_get_mir_cset(glp_tree *tree, int ord, char *cset){
+  glp_prob *mip;
   IOSCUT *cut;
   IOSAUX *aux;
-  int j, n;
+  int j, n, m;
   if ( tree->reason != GLP_ICUTADDED ){
     xerror("glp_ios_cut_get_aux_mir: not called during cut added.\n");
   }
@@ -183,16 +209,86 @@ void glp_ios_cut_get_aux_mir(glp_tree *tree, int ord,
     xerror("glp_ios_cut_get_aux_mir: not called on a mir cut.\n");
   }
   aux = cut->aux;
-  if ( delta != NULL ){
-    (*delta) = aux->mir_delta;
-  }
-  n = tree->n;
+  mip = tree->mip;
+  m = mip->m;
+  n = mip->n;
+
   if( cset != NULL ){
-    for ( j=1; j <= n; j++ ){
+    for ( j=1; j <= n+m; j++ ){
       cset[j] = (aux->mir_cset == NULL) ? 0 : aux->mir_cset[j];
     }
   }
 }
+void glp_ios_cut_get_mir_subst(glp_tree *tree, int ord, char *subst){
+  glp_prob *mip;
+  IOSCUT *cut;
+  IOSAUX *aux;
+  int j, n, m;
+  if ( tree->reason != GLP_ICUTADDED ){
+    xerror("glp_ios_cut_get_aux_mir: not called during cut added.\n");
+  }
+  cut = ios_find_row(tree->local, ord);
+  if ( cut == NULL ){
+    xerror("glp_ios_cut_get_aux_mir: not called on a cut.\n");
+  }
+  if ( cut->klass != GLP_RF_MIR ){
+    xerror("glp_ios_cut_get_aux_mir: not called on a mir cut.\n");
+  }
+  aux = cut->aux;
+  mip = tree->mip;
+  m = mip->m;
+  n = mip->n;
+
+  if( subst != NULL ){
+    for ( j=1; j <= n+m; j++ ){
+      subst[j] = (aux->mir_subst == NULL) ? 0 : aux->mir_subst[j];
+    }
+  }
+}
+void glp_ios_cut_get_mir_virtual_rows(glp_tree *tree, int ord, int vlb_rows[], int vub_rows[]){
+  glp_prob *mip;
+  IOSCUT *cut;
+  IOSAUX *aux;
+  int j, n, m;
+  if ( tree->reason != GLP_ICUTADDED ){
+    xerror("glp_ios_cut_get_aux_mir: not called during cut added.\n");
+  }
+  cut = ios_find_row(tree->local, ord);
+  if ( cut == NULL ){
+    xerror("glp_ios_cut_get_aux_mir: not called on a cut.\n");
+  }
+  if ( cut->klass != GLP_RF_MIR ){
+    xerror("glp_ios_cut_get_aux_mir: not called on a mir cut.\n");
+  }
+  aux = cut->aux;
+  mip = tree->mip;
+  m = mip->m;
+  n = mip->n;
+
+  for ( j=1; j <= n+m; j++ ){
+    vlb_rows[j] = (aux->mir_vlb_rows == NULL) ? 0 : aux->mir_vlb_rows[j];
+    vub_rows[j] = (aux->mir_vub_rows == NULL) ? 0 : aux->mir_vub_rows[j];
+  }
+}
+double glp_ios_cut_get_mir_delta(glp_tree *tree, int ord){
+  glp_prob *mip;
+  IOSCUT *cut;
+  IOSAUX *aux;
+  int j, n, m;
+  if ( tree->reason != GLP_ICUTADDED ){
+    xerror("glp_ios_cut_get_aux_mir: not called during cut added.\n");
+  }
+  cut = ios_find_row(tree->local, ord);
+  if ( cut == NULL ){
+    xerror("glp_ios_cut_get_aux_mir: not called on a cut.\n");
+  }
+  if ( cut->klass != GLP_RF_MIR ){
+    xerror("glp_ios_cut_get_aux_mir: not called on a mir cut.\n");
+  }
+  aux = cut->aux;
+  return aux->mir_delta;
+}
+
 
 void ios_cut_set_selected(IOSCUT *cut, int sel){
 #ifdef CUT_DEBUG

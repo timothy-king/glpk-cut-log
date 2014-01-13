@@ -103,16 +103,26 @@ struct MIR
 
       /*-------------------------------------------------------------*/
       /* Extras I've added to reproduce a cut externally */
-      char *cut_cset; /* char cut_vec[1:n]; */
-      /* cut_cset[k], 1 <= k <= n, is set to true if structural
+      double cut_delta;
+      /* the delta used for generating the cut */
+      char *cut_cset; /* char cut_vec[1+m+n]; */
+      /* cut_cset[k], 1 <= k <= m+n, is set to true if structural
          variable x[k] was complemented in the cut:
          0 - x[k] has been not been complemented
          non 0 - x[k] has been complemented */
-      double cut_delta;
-      /* the delta used for generating the cut */
+      int *vlb_rows; /* int vlb_rows[1+m+n]; */
+      /* vlb_rows[k], 1 <= k <= m+n,
+       * vlb_rows[k] <= 0 if virtual lower bound has not been set
+       * vlb_rows[k] = r if virtual lower bound was set using the row r
+       */
+      int *vub_rows; /* int vub_rows[1+m+n]; */
+      /* vub_rows[k], 1 <= k <= m+n,
+       * vub_rows[k] <= 0 if virtual upper bound has not been set
+       * vub_rows[k] = r if virtual upper bound was set using the row r
+       */
 
       double *agg_coeffs;
-      /* coefficints used to multiply agg_coeffs */
+      /* coefficients used to multiply agg_coeffs */
 };
 
 /***********************************************************************
@@ -159,6 +169,7 @@ static void set_row_attrib(glp_tree *tree, struct MIR *mir)
                xassert(row != row);
          }
          mir->vlb[k] = mir->vub[k] = 0;
+         mir->vlb_rows[k] = mir->vub_rows[k] = 0;
       }
       return;
 }
@@ -194,6 +205,7 @@ static void set_col_attrib(glp_tree *tree, struct MIR *mir)
                xassert(col != col);
          }
          mir->vlb[k] = mir->vub[k] = 0;
+         mir->vlb_rows[k] = mir->vub_rows[k] = 0;
       }
       return;
 }
@@ -243,6 +255,7 @@ static void set_var_bounds(glp_tree *tree, struct MIR *mir)
             {  /* set variable lower bound for x1 */
                mir->lb[k1] = - a2 / a1;
                mir->vlb[k1] = k2;
+               mir->vlb_rows[k1]  = i;
                /* the row should not be used */
                mir->skip[i] = 1;
             }
@@ -253,6 +266,7 @@ static void set_var_bounds(glp_tree *tree, struct MIR *mir)
             {  /* set variable upper bound for x1 */
                mir->ub[k1] = - a2 / a1;
                mir->vub[k1] = k2;
+               mir->vub_rows[k1]  = i;
                /* the row should not be used */
                mir->skip[i] = 1;
             }
@@ -329,6 +343,8 @@ void *ios_mir_init(glp_tree *tree)
 
       /* added */
       mir->cut_cset = xcalloc(1+m+n, sizeof(char));
+      mir->vlb_rows = xcalloc(1+m+n, sizeof(int));
+      mir->vub_rows = xcalloc(1+m+n, sizeof(int));
       mir->agg_coeffs = xcalloc(1+MAXAGGR, sizeof(double));
 
       /* set global row attributes */
@@ -811,7 +827,7 @@ static double cmir_sep(const int n, const double a[], const double b,
       double eps, d_try[1+3], r, r_best;
       struct vset *vset;
       /* allocate working arrays */
-      cset = xcalloc(1+n, sizeof(char));
+      //cset = xcalloc(1+n, sizeof(char));
       vset = xcalloc(1+n, sizeof(struct vset));
       /* choose initial C */
       for (j = 1; j <= n; j++)
@@ -1016,12 +1032,12 @@ static double generate(struct MIR *mir)
       mir->cut_delta = delta;
       // this is not a great place for resetting the array,
       // but it should be sufficient
-      for (j = 1; j <= n;  j++)
+      for (j = 1; j <= n+m;  j++)
          mir->cut_cset[j] = 0;
       for (j = 1; j <= nint; j++)
       {  k = mir->cut_vec->ind[j];
          xassert(m <= k  && k <= m+n);
-         mir->cut_cset[k-m] = cset[j];
+         mir->cut_cset[k] = cset[j];
       }
 skip: /* free working arrays */
       xfree(u);
@@ -1239,10 +1255,15 @@ static void add_cut(glp_tree *tree, struct MIR *mir)
       ord = glp_ios_add_row(tree, NULL, GLP_RF_MIR, 0, len, ind, val, GLP_UP,
          mir->cut_rhs);
       ios_cut_set_aux(tree, ord, mir->agg_cnt, mir->agg_row, mir->agg_coeffs);
-      ios_cut_set_aux_mir(tree, ord, mir->cut_delta, n, mir->cut_cset);
+      ios_cut_set_aux_mir(tree, ord, mir->cut_delta,
+                          mir->cut_cset, mir->subst,
+                          mir->vlb_rows, mir->vub_rows);
 
       /** callback for a cut being added to the cut pool */
-      printf("mir tree parm %p\n", tree->parm->cb_func);
+      printf("mir tree parm %p %d\n", tree->parm->cb_func, ord);
+      printf("  agg_rhs %f\n", mir->agg_rhs);
+      printf("  mod_rhs %f\n", mir->mod_rhs);
+      printf("  cut_rhs %f\n", mir->cut_rhs);
       if (tree->parm->cb_func != NULL)
       {  xassert(tree->reason == GLP_ICUTGEN);
          tree->reason = GLP_ICUTADDED;
@@ -1493,6 +1514,8 @@ void ios_mir_term(void *gen)
 
       /* added */
       xfree(mir->cut_cset);
+      xfree(mir->vlb_rows);
+      xfree(mir->vub_rows);
       xfree(mir->agg_coeffs);
 
       xfree(mir);
