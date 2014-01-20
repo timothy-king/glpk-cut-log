@@ -431,7 +431,7 @@ static int branch_on(glp_tree *T, int j, int next, int clone[], int* to_up)
          else
             xassert(mip != mip);
          ret = 1;
-         to_up = 0;
+         *to_up = 0; /* up is bad. Do not go to up. */
          goto done;
       }
       else if (dn_bad)
@@ -450,7 +450,7 @@ static int branch_on(glp_tree *T, int j, int next, int clone[], int* to_up)
          else
             xassert(mip != mip);
          ret = 1;
-         *to_up = 1;
+         *to_up = 1; /* down is bad. Go to up. */
          goto done;
       }
       /* both down- and up-branches seem to be hopeful */
@@ -1272,6 +1272,7 @@ more: /* minor loop starts here */
          T->br_var = ios_choose_var(T, &T->br_sel);
       /* perform actual branching */
       curr_p = T->curr->p;
+      xassert(T->br_to_up == 0);
       ret = branch_on(T, T->br_var, T->br_sel, branch_clones, &T->br_to_up);
       if (T->parm->cb_func != NULL)
       {  xassert(T->reason == 0);
@@ -1297,6 +1298,7 @@ more: /* minor loop starts here */
             goto done;
          }
       }
+      T->br_to_up = 0;
 
       T->br_var = T->br_sel = 0;
       if (ret == 0)
