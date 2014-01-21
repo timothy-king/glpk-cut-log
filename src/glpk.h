@@ -233,6 +233,7 @@ typedef struct
 #define GLP_ICUTSELECT  0x09  /* cuts were selected as rows */
 #define GLP_LI_BRANCH   0x10  /* a branch was made */
 #define GLP_LI_CLOSE    0x11  /* an active node was closed */
+#define GLP_LI_DELROW   0x12  /* an active node was closed */
 
 /* branch selection indicator: */
 #define GLP_NO_BRNCH       0  /* select no branch */
@@ -1106,6 +1107,8 @@ int glp_ios_branch_log(glp_tree *tree, double *val, int* parent, int* dn, int* u
  */
 
 int glp_ios_node_ord(glp_tree *tree, int node_p);
+
+int glp_ios_rows_deleted(glp_tree *tree, int* rows);
 
 #ifdef __cplusplus
 }

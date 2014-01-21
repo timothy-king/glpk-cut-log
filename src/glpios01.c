@@ -166,6 +166,9 @@ glp_tree *ios_create_tree(glp_prob *mip, const glp_iocp *parm)
       tree->dn_child = 0;
       tree->up_child = 0;
 
+      tree->deleting_rows = NULL;
+      tree->num_deleting_rows = 0;
+
       new_node(tree, NULL);
       return tree;
 }
@@ -508,6 +511,8 @@ void ios_freeze_node(glp_tree *tree)
             xassert(nrs > 0);
             num = xcalloc(1+nrs, sizeof(int));
             for (i = 1; i <= nrs; i++) num[i] = root_m + i;
+            /* To not call ios_cb_rows_deleted here.
+               These rows have been saved earlier. */
             glp_del_rows(mip, nrs, num);
             xfree(num);
          }
@@ -828,6 +833,8 @@ void ios_delete_tree(glp_tree *tree)
          xassert(nrs > 0);
          num = xcalloc(1+nrs, sizeof(int));
          for (i = 1; i <= nrs; i++) num[i] = tree->orig_m + i;
+         /* Do not call ios_cb_rows_deleted here.
+            This does not help log information. */
          glp_del_rows(mip, nrs, num);
          xfree(num);
       }

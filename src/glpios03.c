@@ -704,7 +704,8 @@ static void remove_cuts(glp_tree *T)
          }
       }
       if (cnt > 0)
-      {  glp_del_rows(T->mip, cnt, num);
+      {  ios_cb_rows_deleted(T, cnt, num);
+         glp_del_rows(T->mip, cnt, num);
 #if 0
          xprintf("%d inactive cut(s) removed\n", cnt);
 #endif

@@ -230,6 +230,9 @@ struct glp_tree
       /* subproblem reference number for the just created down node */
       int up_child;
       /* subproblem reference number for the just created up node */
+
+      const int* deleting_rows;
+      int num_deleting_rows;
 };
 
 struct IOSLOT
@@ -691,6 +694,8 @@ void ios_cut_set_aux_mir(glp_tree *T, int ord, double delta,
 
 void ios_cut_set_selected(IOSCUT *cut, int i);
 /* the cut has been added as row i */
+
+void ios_cb_rows_deleted(glp_tree *T, int n, const int* rows);
 
 #endif
 

@@ -416,3 +416,37 @@ int glp_ios_node_ord(glp_tree *tree, int p){
   node = tree->slot[p].node;
   return node->ord;
 }
+
+void ios_cb_rows_deleted(glp_tree *T, int n, const int* rows){
+  if (T->parm->cb_func != NULL)
+  {
+    xassert(T->reason == 0);
+    xassert(T->deleting_rows == NULL);
+    xassert(T->num_deleting_rows == 0);
+    T->num_deleting_rows = n;
+    T->deleting_rows = rows;
+
+    T->reason = GLP_LI_DELROW;
+    T->parm->cb_func(T, T->parm->cb_info);
+    T->reason = 0;
+    T->num_deleting_rows = 0;
+    T->deleting_rows = NULL;
+  }
+}
+
+int glp_ios_rows_deleted(glp_tree *tree, int* rows){
+  if ( tree == NULL ){
+    xerror("glp_ios_rows_deleted: not called with a valid tree.\n");
+  }
+  if ( tree->reason != GLP_LI_DELROW ){
+    xerror("glp_ios_rows_deleted: not called with a valid reason.\n");
+  }
+
+  int j;
+  if(rows != NULL){
+    for(j=1; j <= tree->num_deleting_rows; j++){
+      rows[j] = tree->deleting_rows[j];
+    }
+  }
+  return tree->num_deleting_rows;
+}
