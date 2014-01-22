@@ -76,6 +76,7 @@ static void gen_cut(glp_tree *tree, struct worka *worka, int j)
          if it would be computed with formula (27); it is assumed that
          beta[i] is fractional enough */
       beta = mip->col[j]->prim;
+
       /* compute cut coefficients phi and right-hand side rho, which
          correspond to formula (30); dense format is used, because rows
          of the simplex tableau is usually dense */
@@ -107,6 +108,7 @@ static void gen_cut(glp_tree *tree, struct worka *worka, int j)
          xassert(stat != GLP_BS);
          /* determine row coefficient ksi[i,j] at xN[j]; see (23) */
          ksi = val[j];
+         /* printf("%d %4.15f ", k, ksi); */
          /* if ksi[i,j] is too large in the magnitude, do not generate
             the cut */
          if (fabs(ksi) > 1e+05) goto fini;
@@ -138,6 +140,7 @@ static void gen_cut(glp_tree *tree, struct worka *worka, int j)
                /* y[j] is integer */
                if (fabs(alfa - floor(alfa + 0.5)) < 1e-10)
                {  /* alfa[i,j] is close to nearest integer; skip it */
+                  /* printf("(skip)"); */
                   goto skip;
                }
                else if (f(alfa) <= f(beta))
@@ -173,6 +176,13 @@ static void gen_cut(glp_tree *tree, struct worka *worka, int j)
          }
 skip:    ;
       }
+      /* printf("\n"); */
+      /* for (i = 1; i <= m+n; i++) */
+      /* { */
+      /*   printf("%i %f, ", i, phi[i]); */
+      /* } */
+      /* printf("\n"); */
+
       /* now the cut has the form sum_k phi[k] * x[k] >= rho, where cut
          coefficients are stored in the array phi in dense format;
          x[1,...,m] are auxiliary variables, x[m+1,...,m+n] are struc-
@@ -225,6 +235,8 @@ skip:    ;
       ord = glp_ios_add_row(tree, NULL, GLP_RF_GMI, 0, len, ind, val,
                             GLP_LO, rhs);
       ios_cut_set_single_aux(tree, ord, input_j);
+
+      /* printf("ord: % d beta %f\n", ord, beta); */
 
       /** callback for a cut being added to the cut pool */
       if (tree->parm->cb_func != NULL)
