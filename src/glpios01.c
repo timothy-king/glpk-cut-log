@@ -288,6 +288,7 @@ void ios_revive_node(glp_tree *tree, int p)
             double *val;
             ind = xcalloc(1+n, sizeof(int));
             val = xcalloc(1+n, sizeof(double));
+            /* maintains the row order during revival */
             for (r = node->r_ptr; r != NULL; r = r->next)
             {  i = glp_add_rows(mip, 1);
                glp_set_row_name(mip, i, r->name);
@@ -467,6 +468,13 @@ void ios_freeze_node(glp_tree *tree)
             double *val;
             ind = xcalloc(1+n, sizeof(int));
             val = xcalloc(1+n, sizeof(double));
+            /* Added rows are stored in the same order!
+             * This is done by 2 reversals.
+             * - Going from i = m down pred_m.
+             * - Storing the list by a stack "push"
+             *   node->r_ptr = r;
+             *   r->next = node->r_ptr;
+             */
             for (i = m; i > pred_m; i--)
             {  GLPROW *row = mip->row[i];
                IOSROW *r;
