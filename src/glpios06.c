@@ -1262,10 +1262,10 @@ static void add_cut(glp_tree *tree, struct MIR *mir)
                           mir->vlb_rows, mir->vub_rows);
 
       /** callback for a cut being added to the cut pool */
-      printf("mir tree parm %p %d\n", tree->parm->cb_func, ord);
-      printf("  agg_rhs %f\n", mir->agg_rhs);
-      printf("  mod_rhs %f\n", mir->mod_rhs);
-      printf("  cut_rhs %f\n", mir->cut_rhs);
+      /* printf("mir tree parm %p %d\n", tree->parm->cb_func, ord); */
+      /* printf("  agg_rhs %f\n", mir->agg_rhs); */
+      /* printf("  mod_rhs %f\n", mir->mod_rhs); */
+      /* printf("  cut_rhs %f\n", mir->cut_rhs); */
       if (tree->parm->cb_func != NULL)
       {  xassert(tree->reason == GLP_ICUTGEN);
          tree->reason = GLP_ICUTADDED;
