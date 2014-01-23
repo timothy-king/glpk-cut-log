@@ -976,6 +976,7 @@ static double generate(struct MIR *mir)
             x[j] = mir->ub[k] - mir->x[k];
          else
             xassert(k != k);
+         if(!(x[j] >= -0.001)) { goto skip; }
          xassert(x[j] >= -0.001);
          if (x[j] < 0.0) x[j] = 0.0;
       }
@@ -1005,6 +1006,7 @@ static double generate(struct MIR *mir)
          }
          else
             xassert(k != k);
+         if(!(x >= -0.001)) { goto skip; }
          xassert(x >= -0.001);
          if (x < 0.0) x = 0.0;
          s -= mir->cut_vec->val[j] * x;
