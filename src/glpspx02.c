@@ -3023,6 +3023,10 @@ loop: /* main loop starts here */
       /* accuracy check based on the pivot element */
       {  double piv1 = csa->tcol_vec[csa->p]; /* more accurate */
          double piv2 = csa->trow_vec[csa->q]; /* less accurate */
+         if(piv1 == 0.0){
+           ret = GLP_EFAIL;
+           goto done;
+         }
          xassert(piv1 != 0.0);
          if (fabs(piv1 - piv2) > 1e-8 * (1.0 + fabs(piv1)) ||
              !(piv1 > 0.0 && piv2 > 0.0 || piv1 < 0.0 && piv2 < 0.0))
