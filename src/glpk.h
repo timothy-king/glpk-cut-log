@@ -130,6 +130,7 @@ typedef struct
       int out_frq;            /* spx.out_frq */
       int out_dly;            /* spx.out_dly (milliseconds) */
       int presolve;           /* enable/disable using LP presolver */
+      int stability_lmt;      /* maximum number of check stability failures before stopping */
       double foo_bar[36];     /* (reserved) */
 } glp_smcp;
 

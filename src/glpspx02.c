@@ -288,6 +288,9 @@ struct csa
       double *work2; /* double work2[1+m]; */
       double *work3; /* double work3[1+m]; */
       double *work4; /* double work4[1+m]; */
+
+      /* count the number of stability failures */
+      int stability_failures;
 };
 
 static const double kappa = 0.10;
@@ -501,6 +504,8 @@ static void init_csa(struct csa *csa, glp_prob *lp)
       csa->refct = 0;
       memset(&refsp[1], 0, (m+n) * sizeof(char));
       for (i = 1; i <= m; i++) gamma[i] = 1.0;
+
+      csa->stability_failures = 0;
       return;
 }
 
@@ -2741,7 +2746,13 @@ loop: /* main loop starts here */
          /* make sure that the current basic solution remains dual
             feasible */
          if (check_stab(csa, parm->tol_dj) != 0)
-         {  if (parm->msg_lev >= GLP_MSG_ERR)
+         {
+            csa->stability_failures++;
+            if (csa->stability_failures >= parm->stability_lmt){
+              ret = GLP_EINSTAB;
+              goto done;
+            }
+            if (parm->msg_lev >= GLP_MSG_ERR)
                xprintf("Warning: numerical instability (dual simplex, p"
                   "hase %s)\n", csa->phase == 1 ? "I" : "II");
 #if 1

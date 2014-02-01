@@ -238,6 +238,9 @@ struct csa
       double *work2; /* double work2[1+m]; */
       double *work3; /* double work3[1+m]; */
       double *work4; /* double work4[1+m]; */
+
+      /** Things Tim has added. */
+      int stability_failures;
 };
 
 static const double kappa = 0.10;
@@ -400,6 +403,8 @@ static void init_csa(struct csa *csa, glp_prob *lp)
       csa->refct = 0;
       memset(&refsp[1], 0, (m+n) * sizeof(char));
       for (j = 1; j <= n; j++) gamma[j] = 1.0;
+
+      csa->stability_failures = 0;
       return;
 }
 
@@ -2647,6 +2652,11 @@ loop: /* main loop starts here */
          if (check_stab(csa, parm->tol_bnd))
          {  /* there are excessive bound violations due to round-off
                errors */
+            csa->stability_failures++;
+            if (csa->stability_failures >= parm->stability_lmt){
+              ret = GLP_EINSTAB;
+              goto done;
+            }
             if (parm->msg_lev >= GLP_MSG_ERR)
                xprintf("Warning: numerical instability (primal simplex,"
                   " phase %s)\n", csa->phase == 1 ? "I" : "II");

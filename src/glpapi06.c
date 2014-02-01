@@ -488,6 +488,7 @@ void glp_init_smcp(glp_smcp *parm)
       parm->out_frq = 500;
       parm->out_dly = 0;
       parm->presolve = GLP_OFF;
+      parm->stability_lmt = 200;
       return;
 }
 
