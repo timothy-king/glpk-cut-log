@@ -5,8 +5,9 @@ A fork of glpk that includes additional logging features for how cuts were gener
 - Currently the fork is from glpk-4.52
 
 - Compilation instructions:
+# libtoolize
 # aclocal
-# autoheaders
+# autoheader
 # autoconf
 # automake --add-missing
 # ./configure ...
